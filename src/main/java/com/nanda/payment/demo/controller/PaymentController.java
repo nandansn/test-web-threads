@@ -18,6 +18,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 @RestController
 @RequestMapping("/payments")
@@ -27,6 +29,8 @@ public class PaymentController {
   static List<Merchant> merchants = new ArrayList<>(5);
 
   static ConcurrentHashMap<Long, Object> lockMaps = new ConcurrentHashMap<>();
+
+  private ConcurrentHashMap<Long, AtomicLong> merchantBalances = new ConcurrentHashMap<>();
 
   static ExecutorService executorService = Executors.newFixedThreadPool(100);
 
@@ -88,6 +92,44 @@ public class PaymentController {
     }
 
     return paymentMessage;
+
+
+  }
+
+
+  @PostMapping("lockfree/withdraw")
+  @ResponseBody
+  public String createWithdraw(@RequestBody Payment payment) throws InterruptedException {
+
+    Long merchantId = payment.getMerchant().getId();
+
+    Optional<Merchant> merchant = Optional.ofNullable(
+            merchants.stream().filter(m -> merchantId.equals(m.getId())).findAny()
+                    .orElseThrow(() -> new RuntimeException("Merchant Not Found")));
+
+    AtomicLong balance = merchantBalances.computeIfAbsent(merchantId, this::loadBalanceFromDatabase);
+
+
+    // process async
+    // send notification
+
+
+    ObjectMapper om = new ObjectMapper();
+    String paymentMessage = "";
+    try {
+      paymentMessage = om.writeValueAsString(new PaymentResponse("On Process"));
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+
+    return paymentMessage;
+
+
+  }
+
+  private AtomicLong loadBalanceFromDatabase(long merchantId) {
+
+      return new AtomicLong((long) merchants.stream().filter(merchant -> merchant.getId() == merchantId).findAny().get().getAccount().getBalance());
 
 
   }
