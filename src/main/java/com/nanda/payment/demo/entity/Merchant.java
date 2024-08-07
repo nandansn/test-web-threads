@@ -3,6 +3,7 @@ package com.nanda.payment.demo.entity;
 public class Merchant {
 
   private long id;
+  private String host;
   private Account account;
 
   public Merchant(long id, Account account) {
@@ -24,5 +25,13 @@ public class Merchant {
 
   public void setAccount(Account account) {
     this.account = account;
+  }
+
+  public String getHost() {
+    return host;
+  }
+
+  public void setHost(String host) {
+    this.host = host;
   }
 }
